@@ -1,0 +1,126 @@
+Drop in Data
+
+Usage
+| where DataType == "<DataType>"
+| make-series DailyTotal = sum(Quantity), z=0 on TimeGenerated from startofday(ago(10d)) to now() step 1d
+| render timechart
+
+Specfic search
+
+
+SecurityEvent
+| where TimeGenerated > ago(1h)
+| where EventID == 4624
+| where AccountType =~ "user"
+
+
+Sys Log Search 
+
+let timeframe = 1d;
+
+let DomainList = dynamic(["tor2web.org", "tor2web.com"]);
+
+Syslog
+| where TimeGenerated >= ago(timeframe)
+| where ProcessName contains "squid"
+| extend 
+  HTTP_Status_Code = extract("(TCP_(([A-Z]+)…-9]{3}))",8,SyslogMessage),    
+  Domain = extract("(([A-Z]+ [a-z]{4…Z]+ )([^ :\\/]*))",3,SyslogMessage)
+| where HTTP_Status_Code == "200"
+| where Domain contains "."
+| where Domain has_any (DomainList)
+
+
+Show Computers under a Certain event
+
+SecurityEvent
+| project Computer, Account
+
+Search Specific File
+
+DeviceFileEvents
+| where * contains "log4j"
+| distinct DeviceName, InitiatingProcessFolderPath
+
+
+Cloud App Events
+
+
+CloudAppEvents
+| where Timestamp > datetime("2021-12-09")
+| where UserAgent contains "jndi:" 
+or AccountDisplayName contains "jndi:"
+or Application contains "jndi:"
+or AdditionalFields contains "jndi:"
+| project ActionType, ActivityType, Application, AccountDisplayName, IPAddress, UserAgent, AdditionalFields
+
+
+W3IIISLog
+
+W3CIISLog
+| where Computer == "VMName" and csUserName == "-"
+| project-reorder TimeGenerated, cIP, csUserName, csUriStem, csUriQuery, scStatus, csReferer
+| order by TimeGenerated desc
+
+
+Exchange WorkFlows
+
+OfficeActivity 
+| where OfficeWorkload =~ "Exchange" and Operation =~ "MailItemsAccessed" and ResultStatus =~ "Succeeded"
+| make-series count() on TimeGenerated from startofday(ago(14d)) to startofday(now()) step 1h
+| render timechart 
+
+
+OfficeActivity 
+| where OfficeWorkload =~ "Exchange" and Operation =~ "MailItemsAccessed" and ResultStatus =~ "Succeeded"
+| make-series count() on TimeGenerated from startofday(ago(30d)) to startofday(now()) step 1d
+| render timechart 
+
+
+Palo Alto Alerts
+
+DnsEvents
+
+| where Name == "<domain name from the PA threat list>"
+
+
+FIM Alerts
+
+ConfigurationChange
+| where Computer !contains "WIN10"
+| where RegistryKey == "HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows\\CurrentVersion\\Group Policy\\Scripts\\Startup"
+    or RegistryKey == "HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows\\CurrentVersion\\Group Policy\\Scripts\\Shutdown"
+    or RegistryKey == "HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Drivers32"
+    or RegistryKey == "HKEY_LOCAL_MACHINE\\Software\\Wow6432Node\\Microsoft\\Windows NT\\CurrentVersion\\Drivers32"
+    or RegistryKey == "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
+    or RegistryKey == "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
+    or RegistryKey == "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce"
+    or RegistryKey == "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnceEx"
+
+
+
+CommonSecurityLog
+| where Activity == "THREAT" and SourceIP == "InsertIP"
+| project TimeGenerated, SourceIP, DestinationIP, DeviceEventClassID, RequestURL
+| order by TimeGenerated desc
+
+Event
+| where EventLog == "Application"
+| where Source == "MSSQLSERVER"
+| where EventID == 18453 // This is the Event ID for SQL Login Succeeded
+| summarize count() by Computer
+
+
+If you would like to know where a denied traffic comes from a specific IP address:
+
+AzureDiagnostics 
+| where ResourceType == "AZUREFIREWALLS" 
+    and msg_s contains "request from InsertIP" 
+    and msg_s contains "Deny"
+
+
+search for user
+
+SigninLogs
+| where UserPrincipleName == "insert"
+| project UserPrincipalName, AppDisplayName, ResultType, ResultDescription
