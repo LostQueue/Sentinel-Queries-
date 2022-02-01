@@ -124,3 +124,71 @@ search for user
 SigninLogs
 | where UserPrincipleName == "insert"
 | project UserPrincipalName, AppDisplayName, ResultType, ResultDescription
+
+Get the list of users who have had failed Windows logins, the count of the failures, and the list of servers that they've failed logins to: 
+
+ 
+
+SecurityEvent 
+
+| where EventID == 4625 
+
+| summarize FailureCount = count(), VMList = make_set(Computer) by Account 
+
+ 
+
+Get the list of successful logins from outside the US to Azure AD 
+
+ 
+
+SigninLogs 
+
+| where ResultType == "0" 
+
+| where LocationDetails.countryOrRegion <> "US" 
+
+ 
+
+Get the PA traffic logs for traffic to a specific IP, with only the relevant columns returned (including the firewall security rule that allowed or blocked the traffic) 
+
+ 
+
+let IPToSearchFor = "8.8.8.8"; 
+
+CommonSecurityLog 
+
+| where Activity == "TRAFFIC" 
+
+| where SourceIP == IPToSearchFor or DestinationIP == IPToSearchFor 
+
+| parse AdditionalExtensions with "PolicyRule=" PolicyRule ";" * 
+
+| project TimeGenerated, SourceIP, SourcePort, DestinationIP, DestinationPort, ApplicationProtocol, DeviceEventClassID, PolicyRule 
+
+| order by TimeGenerated desc 
+
+ 
+
+Get the number of daily IDS/IPS threats for the last 30 days in graphical form, broken up by the action taken by the PA 
+
+ 
+
+CommonSecurityLog 
+
+| where Activity == "THREAT" 
+
+| make-series count() on TimeGenerated from ago(30d) to now() step 1d by SimplifiedDeviceAction 
+
+| render timechart  
+
+ 
+
+Search the Azure Activity log for the last 30 days for any log that includes the string "VirtualMachine" in it.  Note that this can be pretty slow and should be avoided unless you don't know which column the data you're looking for is in. 
+
+ 
+
+AzureActivity 
+
+| where TimeGenerated > ago(30d) 
+
+| where * contains "VirtualMachine" 
