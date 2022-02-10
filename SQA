@@ -429,3 +429,9 @@ GetAllLogonsForUser('username', 'domain')
     HostLoggedOn = make_set(Computer)
     by Activity, TargetDomainName, TargetUserName, ProcessName, LogonTypeName
 | extend NumberOfHostsLoggedOn = array_length(HostLoggedOn)
+
+
+Device Logon Search
+
+DeviceLogonEvents
+| where accountname =~ "Insert" and timegenerated > ago(7d)
